@@ -101,7 +101,7 @@ add_library(G2O::G2O ALIAS g2o)
 
 target_compile_features(g2o PRIVATE cxx_std_17)
 
-target_compile_options(g2o PUBLIC -Wall -W -O3 -g)
+target_compile_options(g2o PUBLIC -Wall -W -O3)
 
 target_include_directories(
     g2o

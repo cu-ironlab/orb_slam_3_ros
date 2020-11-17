@@ -1,0 +1,51 @@
+<launch>
+    <arg name="node_name" default="orb_slam"/>
+    <!-- sensor_setup options: mono, mono-inertial, stereo, stereo-inertial, RGBD -->
+    <arg name="sensor_setup" default="mono"/>
+    <arg name="vocab_file" default="$(find orb_slam_3_ros)/vocabulary/ORBvoc.txt"/>
+    <arg name="all_params" default="$(find orb_slam_3_ros)/config/all_params.yaml"/>
+    <arg name="use_viewer" default="true"/>
+    <arg name="mono_cam_in_topic" default="/camera/image_raw"/>
+    <arg name="stereo_in_left_topic" default="/camera/left/image_raw"/>
+    <arg name="stereo_in_right_topic" default="/camera/right/image_raw"/>
+    <arg name="should_rectify" default="false"/> <!-- Set to true if you want to pre-rectify an image -->
+    <arg name="rbgd_in_topic" default="camera/rgb/image_raw"/>
+    <arg name="rbgd_depth_in_topic" default="/camera/depth_registered/image_raw"/>
+    <arg name="imu" default="false"/>
+    <arg name="imu_in_topic" default="/imu"/>
+    <arg name="transform_out_topic" default="/orb_slam/transform"/>
+
+    <node pkg="orb_slam_3_ros" type="orb_slam_3_ros" name="$(arg node_name)" output="screen">
+        <!-- Required Parameters -->
+        <param name="sensor_setup" value="$(arg sensor_setup)" type="string"/>
+        <param name="vocab_file" value="$(arg vocab_file)" type="string"/>
+        <param name="all_params" value="$(arg all_params)" type="string"/>
+
+        <!-- Optional Parameters -->
+
+        <!-- Use Viewer GUI -->
+        <param name="use_viewer" value="$(arg use_viewer)" type="bool"/>
+
+        <!-- Camera Parameters -->
+
+        <!-- Mono Topic -->
+        <param name="mono_cam_in_topic" value="$(arg mono_cam_in_topic)" type="string"/>
+
+        <!-- Stereo Topics -->
+        <param name="stereo_in_left_topic" value="$(arg stereo_in_left_topic)" type="string"/>
+        <param name="stereo_in_right_topic" value="$(arg stereo_in_right_topic)" type="string"/>
+        <param name="should_rectify" value="$(arg should_rectify)" type="bool"/> <!-- Set to true if you want to pre-rectify an image -->
+
+        <!-- RGBD Topics -->
+        <param name="rbgd_in_topic" value="$(arg rbgd_in_topic)" type="string"/>
+        <param name="rbgd_depth_in_topic" value="$(arg rbgd_depth_in_topic" type="string"/>
+
+        <!-- IMU Parameters -->
+        <param name="imu" value="$(arg imu)" type="bool"/>
+        <param name="imu_in_topic" value="$(arg imu_in_topic)" type="string"/>
+
+        <!-- OUT Topic Parameters -->
+        <param name="transform_out_topic" value="$(arg transform_out_topic)" type="string"/>
+
+    </node>
+</launch>

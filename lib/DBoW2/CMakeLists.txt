@@ -17,7 +17,7 @@ add_library(DBoW2::DBoW2 ALIAS dbow2)
 
 target_compile_features(dbow2 PRIVATE cxx_std_17)
 
-target_compile_options(dbow2 PRIVATE -Wall -O3 -g)
+target_compile_options(dbow2 PRIVATE -Wall -O3)
 
 target_link_libraries(
     dbow2

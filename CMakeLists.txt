@@ -134,60 +134,16 @@ include_directories(
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
 add_executable(
-    orb_mono
-        src/ros_mono.cc
-)
-
-target_compile_options(orb_mono PRIVATE -g)
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(
-    orb_mono
-        ${catkin_LIBRARIES}
-        ${OpenCV_LIBS}
-        ORB_SLAM_3::ORB_SLAM_3
-        G2O::G2O
-        DBoW2::DBoW2
-)
-
-add_executable(
-    orb_stereo
-        src/ros_stereo.cc
-)
-
-target_compile_options(orb_stereo PRIVATE -g)
-
-target_link_libraries(
-    orb_stereo
-        ${catkin_LIBRARIES}
-        ${OpenCV_LIBS}
-        ORB_SLAM_3::ORB_SLAM_3
-        G2O::G2O
-        DBoW2::DBoW2
-)
-
-add_executable(
-        orb_slam_3_ros
+    orb_slam_3_ros
         src/orb_slam_3_ros_node.cpp
-        src/ROSAtlas.cpp src/ROSAtlas.h)
+        src/ROSAtlas.cpp src/ROSAtlas.h
+        src/ROSImageGrabber.cpp src/ROSImageGrabber.h)
 
-target_compile_options(orb_slam_3_ros PRIVATE -g -O3)
+target_compile_options(orb_slam_3_ros PRIVATE -O3)
 
 target_link_libraries(
-        orb_slam_3_ros
+    orb_slam_3_ros
         ${catkin_LIBRARIES}
         ${OpenCV_LIBS}
         ORB_SLAM_3::ORB_SLAM_3
@@ -213,8 +169,6 @@ target_link_libraries(
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 install(
     TARGETS
-        orb_mono
-        orb_stereo
         orb_slam_3_ros
     RUNTIME DESTINATION
         ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -246,6 +200,7 @@ install(
     DIRECTORY
         ${CMAKE_CURRENT_SOURCE_DIR}/vocabulary
         ${CMAKE_CURRENT_SOURCE_DIR}/launch
+        ${CMAKE_CURRENT_SOURCE_DIR}/config
     DESTINATION
         ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

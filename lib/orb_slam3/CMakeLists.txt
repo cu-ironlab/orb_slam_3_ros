@@ -43,7 +43,7 @@ add_library(ORB_SLAM_3::ORB_SLAM_3 ALIAS orb_slam_3)
 
 target_compile_features(orb_slam_3 PRIVATE cxx_std_11)
 
-target_compile_options(orb_slam_3 PUBLIC -O3 -g)
+target_compile_options(orb_slam_3 PUBLIC -O3)
 
 target_link_libraries(
     orb_slam_3

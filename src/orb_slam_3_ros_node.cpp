@@ -22,7 +22,7 @@
 #include<fstream>
 #include<chrono>
 
-#include <ros/ros.h>
+#include<ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -31,140 +31,193 @@
 #include<opencv2/core/core.hpp>
 
 #include"orb_slam3/System.h"
+#include "ROSAtlas.h"
+#include "ROSImageGrabber.h"
 
-using namespace std;
-
-class ImageGrabber
-{
-public:
-    ImageGrabber(ORB_SLAM3::System* pSLAM):mpSLAM(pSLAM){}
-
-    void GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const sensor_msgs::ImageConstPtr& msgRight);
-
-    ORB_SLAM3::System* mpSLAM;
-    bool do_rectify;
-    cv::Mat M1l,M2l,M1r,M2r;
-};
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "RGBD");
     ros::start();
-
-    if(argc != 4)
-    {
-        cerr << endl << "Usage: rosrun ORB_SLAM3 Stereo path_to_vocabulary path_to_settings do_rectify" << endl;
-        ros::shutdown();
-        return 1;
-    }    
-
-    // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::STEREO,true);
-
-    ImageGrabber igb(&SLAM);
-
-    stringstream ss(argv[3]);
-	ss >> boolalpha >> igb.do_rectify;
-
-    if(igb.do_rectify)
-    {      
-        // Load settings related to stereo calibration
-        cv::FileStorage fsSettings(argv[2], cv::FileStorage::READ);
-        if(!fsSettings.isOpened())
-        {
-            cerr << "ERROR: Wrong path to settings" << endl;
-            return -1;
-        }
-
-        cv::Mat K_l, K_r, P_l, P_r, R_l, R_r, D_l, D_r;
-        fsSettings["LEFT.K"] >> K_l;
-        fsSettings["RIGHT.K"] >> K_r;
-
-        fsSettings["LEFT.P"] >> P_l;
-        fsSettings["RIGHT.P"] >> P_r;
-
-        fsSettings["LEFT.R"] >> R_l;
-        fsSettings["RIGHT.R"] >> R_r;
-
-        fsSettings["LEFT.D"] >> D_l;
-        fsSettings["RIGHT.D"] >> D_r;
-
-        int rows_l = fsSettings["LEFT.height"];
-        int cols_l = fsSettings["LEFT.width"];
-        int rows_r = fsSettings["RIGHT.height"];
-        int cols_r = fsSettings["RIGHT.width"];
-
-        if(K_l.empty() || K_r.empty() || P_l.empty() || P_r.empty() || R_l.empty() || R_r.empty() || D_l.empty() || D_r.empty() ||
-                rows_l==0 || rows_r==0 || cols_l==0 || cols_r==0)
-        {
-            cerr << "ERROR: Calibration parameters to rectify stereo are missing!" << endl;
-            return -1;
-        }
-
-        cv::initUndistortRectifyMap(K_l,D_l,R_l,P_l.rowRange(0,3).colRange(0,3),cv::Size(cols_l,rows_l),CV_32F,igb.M1l,igb.M2l);
-        cv::initUndistortRectifyMap(K_r,D_r,R_r,P_r.rowRange(0,3).colRange(0,3),cv::Size(cols_r,rows_r),CV_32F,igb.M1r,igb.M2r);
-    }
-
     ros::NodeHandle nh;
-
-    message_filters::Subscriber<sensor_msgs::Image> left_sub(nh, "/camera/left/image_raw", 1);
-    message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, "/camera/right/image_raw", 1);
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
-    message_filters::Synchronizer<sync_pol> sync(sync_pol(10), left_sub,right_sub);
-    sync.registerCallback(boost::bind(&ImageGrabber::GrabStereo,&igb,_1,_2));
-
-    ros::spin();
-
-    // Stop all threads
-    SLAM.Shutdown();
-
-    // Save camera trajectory
-    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory_TUM_Format.txt");
-    SLAM.SaveTrajectoryTUM("FrameTrajectory_TUM_Format.txt");
-    SLAM.SaveTrajectoryKITTI("FrameTrajectory_KITTI_Format.txt");
-
-    ros::shutdown();
-
-    return 0;
-}
-
-void ImageGrabber::GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const sensor_msgs::ImageConstPtr& msgRight)
-{
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptrLeft;
-    try
+    ros::NodeHandle local_nh{"~"};
+    
+    /// proceed flag allows us to maintain a singular exit point. If it ever becomes false, the whole program should bail out.
+    bool proceed = true;
+    
+    /**
+     * Read the Required Parameters from Parameter Server
+     */
+    std::string vocab_loc;
+    if (!local_nh.getParam("vocab_file", vocab_loc))
     {
-        cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
+        ROS_ERROR("Vocab file parameter not set.");
+        proceed = false;
     }
-    catch (cv_bridge::Exception& e)
+    
+    std::string all_params_loc;
+    if (proceed && !local_nh.getParam("all_params", all_params_loc))
     {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
+        ROS_ERROR("All params file parameter not set.");
+        proceed = false;
     }
-
-    cv_bridge::CvImageConstPtr cv_ptrRight;
-    try
+    
+    std::string sensor_setup;
+    if (proceed && !local_nh.getParam("sensor_setup", sensor_setup))
     {
-        cv_ptrRight = cv_bridge::toCvShare(msgRight);
+        ROS_ERROR("Sensor setup parameter not set.");
+        proceed = false;
     }
-    catch (cv_bridge::Exception& e)
+    
+    ORB_SLAM3::System::eSensor sensors;
+    if (sensor_setup == "mono")
+        sensors = ORB_SLAM3::System::MONOCULAR;
+    else if (sensor_setup == "mono-inertial")
     {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
+        sensors = ORB_SLAM3::System::IMU_MONOCULAR;
+        ROS_ERROR("Mono with IMU not yet supported in this ROS package.");
+        proceed = false;
     }
-
-    if(do_rectify)
+    else if (sensor_setup == "stereo")
+        sensors = ORB_SLAM3::System::STEREO;
+    else if (sensor_setup == "stereo-inertial")
     {
-        cv::Mat imLeft, imRight;
-        cv::remap(cv_ptrLeft->image,imLeft,M1l,M2l,cv::INTER_LINEAR);
-        cv::remap(cv_ptrRight->image,imRight,M1r,M2r,cv::INTER_LINEAR);
-        mpSLAM->TrackStereo(imLeft,imRight,cv_ptrLeft->header.stamp.toSec());
+        sensors = ORB_SLAM3::System::IMU_STEREO;
+        ROS_ERROR("Stereo with IMU not yet supported in this ROS package.");
+        proceed = false;
+    }
+    else if (sensor_setup == "RGBD")
+    {
+        sensors = ORB_SLAM3::System::RGBD;
+        ROS_ERROR("RGBD not yet supported in this ROS package.");
+        proceed = false;
     }
     else
     {
-        mpSLAM->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());
+        ROS_ERROR("Bad sensor setup type passed");
+        proceed = false;
     }
+    
+    
+    /**
+     * Start the setup now that the required parameters are loaded
+     */
+    
+    if( proceed )
+    {
+        /**
+         * Create a ROS specific Atlas because it is what publishes our position
+         */
+        std::string transform_out_topic{"orb_slam/transform"};
+        local_nh.getParam("transform_out_topic", transform_out_topic);
+        auto atlas = new ROSAtlas(nh, transform_out_topic, 0);
+        
+        /**
+         * Create the Pangolin windows to see key frames and image output
+         */
+        bool use_viewer{true};
+        local_nh.getParam("use_viewer", use_viewer);
+        
+        
+        /// Create SLAM system. It initializes all system threads and gets ready to process frames.
+        /// TODO: replace threads with ROS Timers
+        ORB_SLAM3::System SLAM(atlas, vocab_loc, all_params_loc, sensors, use_viewer);
+    
+        /**
+         * Get the appropriate image grabber based on our sensor setup.
+         */
+        std::unique_ptr<ROSImageGrabber> image_grabber;
+        switch(sensors)
+        {
+            default: ROS_ERROR("NOT YET SUPPORTED"); proceed = false;
+            case ORB_SLAM3::System::MONOCULAR:
+            {
+                std::string mono_in_topic{"camera/image_raw"};
+                local_nh.getParam("mono_cam_in_topic", mono_in_topic);
+                image_grabber = std::make_unique<ROSMonoImageGrabber>(&SLAM, nh, mono_in_topic);
+                break;
+            }
+            case ORB_SLAM3::System::STEREO:
+            {
+                std::string stereo_in_left_topic{"camera/left/image_raw"};
+                std::string stereo_in_right_topic{"camera/right/image_raw"};
+                bool should_rectify = false;
+                
+                local_nh.getParam("stereo_in_left_topic", stereo_in_left_topic);
+                local_nh.getParam("stereo_in_right_topic", stereo_in_right_topic);
+                local_nh.getParam("should_rectify", should_rectify);
+                
+                if (should_rectify)
+                {
+                    cv::Mat m1l, m2l, m1r, m2r;
+                    cv::FileStorage fsSettings(all_params_loc, cv::FileStorage::READ);
+                    if (!fsSettings.isOpened())
+                    {
+                        ROS_ERROR("Wrong path given for settings file.");
+                        proceed = false;
+                    }
+    
+                    if( proceed )
+                    {
+                        cv::Mat K_l, K_r, P_l, P_r, R_l, R_r, D_l, D_r;
+                        fsSettings["LEFT.K"] >> K_l;
+                        fsSettings["RIGHT.K"] >> K_r;
+    
+                        fsSettings["LEFT.P"] >> P_l;
+                        fsSettings["RIGHT.P"] >> P_r;
+    
+                        fsSettings["LEFT.R"] >> R_l;
+                        fsSettings["RIGHT.R"] >> R_r;
+    
+                        fsSettings["LEFT.D"] >> D_l;
+                        fsSettings["RIGHT.D"] >> D_r;
+    
+                        int rows_l = fsSettings["LEFT.height"];
+                        int cols_l = fsSettings["LEFT.width"];
+                        int rows_r = fsSettings["RIGHT.height"];
+                        int cols_r = fsSettings["RIGHT.width"];
+    
+                        if (K_l.empty() || K_r.empty() || P_l.empty() || P_r.empty() || R_l.empty() || R_r.empty() ||
+                            D_l.empty() ||
+                            D_r.empty() ||
+                            rows_l == 0 || rows_r == 0 || cols_l == 0 || cols_r == 0)
+                        {
+                            ROS_ERROR("Calibration parameters to rectify stereo are missing!");
+                            proceed = false;
+                        }
+    
+                        if( proceed )
+                        {
+                            cv::initUndistortRectifyMap(K_l, D_l, R_l, P_l.rowRange(0, 3).colRange(0, 3),
+                                                        cv::Size(cols_l, rows_l),
+                                                        CV_32F, m1l, m2l);
+                            cv::initUndistortRectifyMap(K_r, D_r, R_r, P_r.rowRange(0, 3).colRange(0, 3),
+                                                        cv::Size(cols_r, rows_r),
+                                                        CV_32F, m1r, m2r);
+                            image_grabber = std::make_unique<ROSStereoImageGrabber>(
+                                &SLAM, nh, stereo_in_left_topic, stereo_in_right_topic, should_rectify,
+                                m1l, m2l, m1r, m2r
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    image_grabber = std::make_unique<ROSStereoImageGrabber>(
+                        &SLAM, nh, stereo_in_left_topic, stereo_in_right_topic, should_rectify
+                    );
+                }
+                break;
+            }
+        }
+        
+        if( proceed )
+            ros::spin();
+    
+        // Stop all threads
+        SLAM.Shutdown();
 
+        ros::shutdown();
+    }
+    return proceed ? 0 : -1;
 }
-
-

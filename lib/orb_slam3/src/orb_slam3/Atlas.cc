@@ -105,6 +105,7 @@ void Atlas::AddKeyFrame(KeyFrame* pKF)
 {
     Map* pMapKF = pKF->GetMap();
     pMapKF->AddKeyFrame(pKF);
+
 }
 
 void Atlas::AddMapPoint(MapPoint* pMP)

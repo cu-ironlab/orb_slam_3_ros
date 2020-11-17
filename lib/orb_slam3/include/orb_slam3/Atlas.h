@@ -84,7 +84,7 @@ public:
     void SetViewer(Viewer* pViewer);
 
     // Method for change components in the current map
-    void AddKeyFrame(KeyFrame* pKF);
+    virtual void AddKeyFrame(KeyFrame* pKF);
     void AddMapPoint(MapPoint* pMP);
     //void EraseMapPoint(MapPoint* pMP);
     //void EraseKeyFrame(KeyFrame* pKF);

@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="orb_slam_3_ros" type="orb_stereo" name="orb_stereo" args="$(find orb_slam_3_ros)/vocabulary/ORBvoc.txt $(find app_urssa)/config/UnityCam.yaml false" />
-</launch>
