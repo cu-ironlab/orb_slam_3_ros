@@ -21,7 +21,8 @@ void ROSAtlas::AddKeyFrame(ORB_SLAM3::KeyFrame *pKF)
     vector<float> quat  = ORB_SLAM3::Converter::toQuaternion(rotation);
     cv::Mat translation = pKF->GetCameraCenter();
     msg.header.stamp    = ros::Time(pKF->mTimeStamp);
-    msg.child_frame_id  = "camera_center";
+    msg.header.frame_id = "orb_origin";
+    msg.child_frame_id  = "orb_slam_3";
     msg.transform.translation.x = translation.at<float>(0);
     msg.transform.translation.y = translation.at<float>(1);
     msg.transform.translation.z = translation.at<float>(2);
