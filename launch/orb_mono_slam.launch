@@ -1,0 +1,47 @@
+<launch>
+    <!-- ===================== -->
+    <!-- | COMMAND LINE ARGS | -->
+    <!-- ===================== -->
+
+    <!-- Node Naming Args -->
+    <arg name="node_name" default="slam"/>
+
+    <!-- Orb Args -->
+    <arg name="file/vocab"      default="$(find orb_slam_3_ros)/vocabulary/ORBvoc.txt"/>
+    <arg name="file/orb_params" default="$(find orb_slam_3_ros)/config/orb_params.yaml"/>
+
+    <!-- Topics Args -->
+    <arg name="input/mono_cam_topic"   default="sensors/camera/image"/>
+    <arg name="output/transform_topic" default="orb/position/transform"/>
+
+    <!-- TF Args -->
+    <arg name="tf/parent" default="orb_origin"/>
+    <arg name="tf/child"  default="orb_position"/>
+
+    <!-- Viewer Args-->
+    <arg name="use_viewer" default="false"/>
+    <arg name="output/features_image_topic" default="orb/features_image"/>
+
+    <!-- ==================== -->
+    <!-- | PARAMETER SERVER | -->
+    <!-- ==================== -->
+
+    <param name="file/vocab"      value="$(arg file/vocab)"/>
+    <param name="file/orb_params" value="$(arg file/orb_params)"/>
+
+    <!-- Topic Params -->
+    <param name="input/mono_cam_topic"   value="$(arg input/mono_cam_topic)"/>
+    <param name="output/transform_topic" value="$(arg output/transform_topic)"/>
+
+    <!-- TF Params -->
+    <param name="tf/parent" value="$(arg tf/parent)"/>
+    <param name="tf/child"  value="$(arg tf/child)"/>
+
+    <!-- Viewer Params -->
+    <param name="use_viewer" value="$(arg use_viewer)"/>
+    <param name="output/features_image_topic" value="$(arg output/features_image_topic)"/>
+
+    <node pkg="orb_slam_3_ros" type="orb_slam_3_mono" name="$(arg node_name)" output="screen">
+        <!-- Orb Params -->
+    </node>
+</launch>

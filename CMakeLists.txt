@@ -13,6 +13,7 @@ find_package(
         cv_bridge
         roscpp
         message_filters
+        image_transport
 )
 
 ## System dependencies are found with CMake's conventions
@@ -135,15 +136,14 @@ include_directories(
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(
-    orb_slam_3_ros
-        src/orb_slam_3_ros_node.cpp
-        src/ROSAtlas.cpp src/ROSAtlas.h
-        src/ROSImageGrabber.cpp src/ROSImageGrabber.h)
+    orb_slam_3_mono
+        src/orb_slam_3_mono.cpp
+        src/ImageTransformer.cpp src/ImageTransformer.h)
 
-target_compile_options(orb_slam_3_ros PRIVATE -O3)
+target_compile_options(orb_slam_3_mono PRIVATE -O3)
 
 target_link_libraries(
-    orb_slam_3_ros
+    orb_slam_3_mono
         ${catkin_LIBRARIES}
         ${OpenCV_LIBS}
         ORB_SLAM_3::ORB_SLAM_3
@@ -169,7 +169,7 @@ target_link_libraries(
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 install(
     TARGETS
-        orb_slam_3_ros
+        orb_slam_3_mono
     RUNTIME DESTINATION
         ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
